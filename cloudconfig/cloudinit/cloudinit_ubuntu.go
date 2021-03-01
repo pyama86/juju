@@ -9,12 +9,11 @@ import (
 	"strings"
 
 	"github.com/juju/errors"
-	"github.com/juju/juju/core/snap"
-	jujupackaging "github.com/juju/juju/packaging"
 	"github.com/juju/packaging"
 	"github.com/juju/packaging/config"
 	"github.com/juju/proxy"
 	"github.com/juju/utils/v2"
+	jujupackaging "github.com/pyama86/juju/packaging"
 	"gopkg.in/yaml.v2"
 )
 
@@ -314,35 +313,5 @@ func (cfg *ubuntuCloudConfig) updateProxySettings(proxyCfg PackageManagerProxyCo
 			filename))
 	}
 
-	// Write out the snap http/https proxy settings
-	if snapProxy := proxyCfg.SnapProxy(); (snapProxy != proxy.Settings{}) {
-		pkgCmder := cfg.paccmder[jujupackaging.SnapPackageManager]
-		for _, cmd := range pkgCmder.SetProxyCmds(snapProxy) {
-			cfg.AddBootCmd(cmd)
-		}
-	}
-
-	// Configure snap store proxy
-	if proxyURL := proxyCfg.SnapStoreProxyURL(); proxyURL != "" {
-		assertions, storeID, err := snap.LookupAssertions(proxyURL)
-		if err != nil {
-			return err
-		}
-		logger.Infof("auto-detected snap store assertions from proxy")
-		logger.Infof("auto-detected snap store ID as %q", storeID)
-		cfg.genSnapStoreProxyCmds(assertions, storeID)
-	} else if proxyCfg.SnapStoreAssertions() != "" && proxyCfg.SnapStoreProxyID() != "" {
-		cfg.genSnapStoreProxyCmds(proxyCfg.SnapStoreAssertions(), proxyCfg.SnapStoreProxyID())
-	}
-
 	return nil
-}
-
-func (cfg *ubuntuCloudConfig) genSnapStoreProxyCmds(assertions, storeID string) {
-	cfg.AddBootCmd(fmt.Sprintf(
-		`printf '%%s\n' %s > %s`,
-		utils.ShQuote(assertions),
-		"/etc/snap.assertions"))
-	cfg.AddBootCmd("snap ack /etc/snap.assertions")
-	cfg.AddBootCmd("snap set core proxy.store=" + storeID)
 }
